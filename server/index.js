@@ -42,6 +42,24 @@ try {
   console.warn('Make sure you have a valid kubeconfig file or are running in a Kubernetes cluster.');
 }
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Kubernetes Dashboard API Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      clusterInfo: '/api/cluster/info',
+      namespaces: '/api/namespaces',
+      pods: '/api/pods',
+      deployments: '/api/deployments',
+      services: '/api/services',
+      nodes: '/api/nodes',
+      metrics: '/api/metrics/summary'
+    }
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
