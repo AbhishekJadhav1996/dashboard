@@ -8,7 +8,13 @@ require('dotenv').config();
 const app = express();
 expressWs(app);
 
-app.use(cors());
+// CORS configuration - allow requests from React dev server (port 3000) and production
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CLIENT_URL || '*' 
+    : ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Serve static files from React app in production
