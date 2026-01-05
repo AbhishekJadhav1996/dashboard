@@ -18,7 +18,10 @@ if [ -f "package-lock.json" ]; then
   echo "Removing old package-lock.json..."
   rm package-lock.json
 fi
+# Install dependencies with legacy peer deps and ensure ajv is properly resolved
 npm install --legacy-peer-deps
+# Ensure ajv is properly installed to fix the codegen module issue
+npm install ajv@^8.12.0 --legacy-peer-deps --save
 cd ..
 
 echo "Installation complete!"
