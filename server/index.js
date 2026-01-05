@@ -31,8 +31,16 @@ try {
   kc.loadFromDefault();
   k8sApi = kc.makeApiClient(k8s.CoreV1Api);
   k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
-  k8sMetricsApi = kc.makeApiClient(k8s.MetricsV1beta1Api);
   k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+  
+  // Metrics API might not be available in all environments, make it optional
+  try {
+    if (k8s.MetricsV1beta1Api) {
+      k8sMetricsApi = kc.makeApiClient(k8s.MetricsV1beta1Api);
+    }
+  } catch (metricsError) {
+    console.warn('Metrics API not available:', metricsError.message);
+  }
   
   k8sInitialized = true;
   console.log('Kubernetes client initialized successfully');
