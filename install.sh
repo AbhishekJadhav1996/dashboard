@@ -3,34 +3,74 @@
 # Clean install script for Kubernetes Dashboard
 # This script handles dependency conflicts and ensures clean installation
 
-echo "Installing root dependencies..."
+echo "=========================================="
+echo "Installing Kubernetes Dashboard Dependencies"
+echo "=========================================="
+echo ""
+
+# Step 1: Install root dependencies
+echo "Step 1/3: Installing root dependencies..."
 npm install
-
-# Ensure concurrently is installed globally or locally
-if ! command -v concurrently &> /dev/null; then
-  echo "Installing concurrently..."
-  npm install concurrently --save-dev
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to install root dependencies"
+  exit 1
 fi
+echo "✓ Root dependencies installed"
+echo ""
 
-echo "Installing server dependencies..."
+# Step 2: Install server dependencies
+echo "Step 2/3: Installing server dependencies..."
 cd server
 npm install
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to install server dependencies"
+  exit 1
+fi
 cd ..
+echo "✓ Server dependencies installed"
+echo ""
 
-echo "Installing client dependencies (with legacy peer deps to handle React 18 compatibility)..."
+# Step 3: Install client dependencies
+echo "Step 3/3: Installing client dependencies..."
 cd client
-# Remove old package-lock.json if it exists to avoid conflicts
+
+# Remove old files if they exist
 if [ -f "package-lock.json" ]; then
   echo "Removing old package-lock.json..."
   rm package-lock.json
 fi
-# Install dependencies with legacy peer deps and ensure ajv is properly resolved
-npm install --legacy-peer-deps
-# Ensure ajv is properly installed to fix the codegen module issue
-npm install ajv@^8.12.0 --legacy-peer-deps --save
-cd ..
 
-echo "Installation complete!"
+# Install dependencies with legacy peer deps
+echo "Installing client dependencies (this may take a few minutes)..."
+npm install --legacy-peer-deps
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to install client dependencies"
+  exit 1
+fi
+
+# Ensure ajv is properly installed
+echo "Installing ajv..."
+npm install ajv@^8.12.0 --legacy-peer-deps --save
+
+# Verify react-scripts is installed
+if [ ! -d "node_modules/react-scripts" ]; then
+  echo "Installing react-scripts..."
+  npm install react-scripts@5.0.1 --legacy-peer-deps --save
+fi
+
+cd ..
+echo "✓ Client dependencies installed"
 echo ""
-echo "To start the application, run: npm run dev"
+
+echo "=========================================="
+echo "Installation Complete!"
+echo "=========================================="
+echo ""
+echo "To start the application:"
+echo "  npm run dev          # Start both server and client"
+echo ""
+echo "Or start them separately:"
+echo "  Terminal 1: cd server && npm run dev"
+echo "  Terminal 2: cd client && npm start"
+echo ""
 
