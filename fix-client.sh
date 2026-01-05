@@ -18,7 +18,15 @@ npm install --legacy-peer-deps
 echo "Installing ajv..."
 npm install ajv@^8.12.0 --legacy-peer-deps --save
 
+# Verify react-scripts is installed
+if [ ! -d "node_modules/react-scripts" ]; then
+  echo "Installing react-scripts..."
+  npm install react-scripts@5.0.1 --legacy-peer-deps --save
+fi
+
+echo ""
 echo "Client dependencies fixed!"
 echo ""
-echo "You can now start the application with: npm run dev"
+echo "To test the client, run: cd client && npm start"
+echo "Or start both server and client: npm run dev (from root directory)"
 
