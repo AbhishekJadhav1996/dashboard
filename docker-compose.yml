@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    container_name: k8s-dashboard-pro
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount kubeconfig - adjust path for your system
+      - ${HOME}/.kube/config:/root/.kube/config:ro
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - dashboard-network
+
+networks:
+  dashboard-network:
+    driver: bridge
+
