@@ -39,13 +39,21 @@ if [ -f "package-lock.json" ]; then
   echo "Removing old package-lock.json..."
   rm package-lock.json
 fi
+if [ -d "node_modules" ]; then
+  echo "Removing old node_modules..."
+  rm -rf node_modules
+fi
 
 # Install dependencies with legacy peer deps
 echo "Installing client dependencies (this may take a few minutes)..."
 npm install --legacy-peer-deps
 if [ $? -ne 0 ]; then
-  echo "ERROR: Failed to install client dependencies"
-  exit 1
+  echo "WARNING: Initial install failed, trying with force..."
+  npm install --legacy-peer-deps --force
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to install client dependencies"
+    exit 1
+  fi
 fi
 
 # Ensure ajv is properly installed
@@ -56,6 +64,12 @@ npm install ajv@^8.12.0 --legacy-peer-deps --save
 if [ ! -d "node_modules/react-scripts" ]; then
   echo "Installing react-scripts..."
   npm install react-scripts@5.0.1 --legacy-peer-deps --save
+fi
+
+# Verify @uiw/react-json-view is installed
+if [ ! -d "node_modules/@uiw/react-json-view" ]; then
+  echo "Installing @uiw/react-json-view..."
+  npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save
 fi
 
 cd ..
