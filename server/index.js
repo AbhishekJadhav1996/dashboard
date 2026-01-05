@@ -23,7 +23,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Initialize Kubernetes client
-let kc, k8sApi, k8sAppsApi, k8sMetricsApi, k8sCustomApi, k8sVersionApi;
+let kc, k8sApi, k8sAppsApi, k8sMetricsApi, k8sCustomApi;
 let k8sInitialized = false;
 
 try {
@@ -33,7 +33,7 @@ try {
   k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
   k8sMetricsApi = kc.makeApiClient(k8s.MetricsV1beta1Api);
   k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
-  k8sVersionApi = kc.makeApiClient(k8s.VersionApi);
+  
   k8sInitialized = true;
   console.log('Kubernetes client initialized successfully');
 } catch (error) {
@@ -53,9 +53,25 @@ app.get('/api/cluster/info', async (req, res) => {
     return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
   }
   try {
-    const version = await k8sVersionApi.getCode();
+    // Get version info from nodes (kubelet version)
+    let versionInfo = null;
+    try {
+      const nodesResponse = await k8sApi.listNode();
+      if (nodesResponse.body.items && nodesResponse.body.items.length > 0) {
+        const firstNode = nodesResponse.body.items[0];
+        versionInfo = {
+          kubeletVersion: firstNode.status?.nodeInfo?.kubeletVersion || 'unknown',
+          kubeProxyVersion: firstNode.status?.nodeInfo?.kubeProxyVersion || 'unknown',
+          containerRuntimeVersion: firstNode.status?.nodeInfo?.containerRuntimeVersion || 'unknown'
+        };
+      }
+    } catch (versionError) {
+      // Failed to get version info, continue without it
+      console.warn('Failed to get cluster version from nodes:', versionError.message);
+    }
+    
     res.json({
-      version: version.body,
+      version: versionInfo,
       context: kc.getCurrentContext(),
       cluster: kc.getCurrentCluster()?.name || 'unknown'
     });
