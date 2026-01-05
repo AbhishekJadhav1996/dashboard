@@ -56,9 +56,7 @@ if [ $? -ne 0 ]; then
   fi
 fi
 
-# Ensure ajv is properly installed
-echo "Installing ajv..."
-npm install ajv@^8.12.0 --legacy-peer-deps --save
+# Note: We don't install ajv separately - react-scripts manages its own version
 
 # Verify react-scripts is installed
 if [ ! -d "node_modules/react-scripts" ]; then
