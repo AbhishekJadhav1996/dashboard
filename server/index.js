@@ -17,13 +17,24 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Initialize Kubernetes client
-const kc = new k8s.KubeConfig();
-kc.loadFromDefault();
+let kc, k8sApi, k8sAppsApi, k8sMetricsApi, k8sCustomApi, k8sVersionApi;
+let k8sInitialized = false;
 
-const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
-const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
-const k8sMetricsApi = kc.makeApiClient(k8s.MetricsV1beta1Api);
-const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+try {
+  kc = new k8s.KubeConfig();
+  kc.loadFromDefault();
+  k8sApi = kc.makeApiClient(k8s.CoreV1Api);
+  k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
+  k8sMetricsApi = kc.makeApiClient(k8s.MetricsV1beta1Api);
+  k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+  k8sVersionApi = kc.makeApiClient(k8s.VersionApi);
+  k8sInitialized = true;
+  console.log('Kubernetes client initialized successfully');
+} catch (error) {
+  console.warn('Warning: Kubernetes client initialization failed:', error.message);
+  console.warn('The server will start but Kubernetes API endpoints will return errors.');
+  console.warn('Make sure you have a valid kubeconfig file or are running in a Kubernetes cluster.');
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -32,8 +43,11 @@ app.get('/api/health', (req, res) => {
 
 // Get cluster info
 app.get('/api/cluster/info', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
-    const version = await k8sApi.getCode();
+    const version = await k8sVersionApi.getCode();
     res.json({
       version: version.body,
       context: kc.getCurrentContext(),
@@ -46,6 +60,9 @@ app.get('/api/cluster/info', async (req, res) => {
 
 // Get namespaces
 app.get('/api/namespaces', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const response = await k8sApi.listNamespace();
     res.json(response.body.items.map(ns => ({
@@ -61,6 +78,9 @@ app.get('/api/namespaces', async (req, res) => {
 
 // Get pods
 app.get('/api/pods', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const namespace = req.query.namespace || 'default';
     const response = await k8sApi.listNamespacedPod(namespace);
@@ -87,6 +107,9 @@ app.get('/api/pods', async (req, res) => {
 
 // Get pod details
 app.get('/api/pods/:namespace/:name', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const { namespace, name } = req.params;
     const response = await k8sApi.readNamespacedPod(name, namespace);
@@ -98,6 +121,9 @@ app.get('/api/pods/:namespace/:name', async (req, res) => {
 
 // Get pod logs
 app.get('/api/pods/:namespace/:name/logs', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const { namespace, name } = req.params;
     const container = req.query.container;
@@ -123,6 +149,9 @@ app.get('/api/pods/:namespace/:name/logs', async (req, res) => {
 
 // Get deployments
 app.get('/api/deployments', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const namespace = req.query.namespace || 'default';
     const response = await k8sAppsApi.listNamespacedDeployment(namespace);
@@ -144,6 +173,9 @@ app.get('/api/deployments', async (req, res) => {
 
 // Get services
 app.get('/api/services', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const namespace = req.query.namespace || 'default';
     const response = await k8sApi.listNamespacedService(namespace);
@@ -164,6 +196,9 @@ app.get('/api/services', async (req, res) => {
 
 // Get nodes
 app.get('/api/nodes', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const response = await k8sApi.listNode();
     const nodes = response.body.items.map(node => {
@@ -190,6 +225,9 @@ app.get('/api/nodes', async (req, res) => {
 
 // Get cluster metrics summary
 app.get('/api/metrics/summary', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const [podsResponse, nodesResponse, deploymentsResponse, servicesResponse] = await Promise.all([
       k8sApi.listPodForAllNamespaces(),
@@ -238,6 +276,9 @@ app.get('/api/metrics/summary', async (req, res) => {
 
 // Delete pod
 app.delete('/api/pods/:namespace/:name', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const { namespace, name } = req.params;
     await k8sApi.deleteNamespacedPod(name, namespace);
@@ -249,6 +290,9 @@ app.delete('/api/pods/:namespace/:name', async (req, res) => {
 
 // Delete deployment
 app.delete('/api/deployments/:namespace/:name', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const { namespace, name } = req.params;
     await k8sAppsApi.deleteNamespacedDeployment(name, namespace);
@@ -260,6 +304,9 @@ app.delete('/api/deployments/:namespace/:name', async (req, res) => {
 
 // Create namespace
 app.post('/api/namespaces', async (req, res) => {
+  if (!k8sInitialized) {
+    return res.status(503).json({ error: 'Kubernetes client not initialized. Please check your kubeconfig.' });
+  }
   try {
     const { name, labels } = req.body;
     const namespace = {
@@ -278,6 +325,15 @@ app.post('/api/namespaces', async (req, res) => {
 // WebSocket for real-time updates
 app.ws('/ws', (ws, req) => {
   console.log('WebSocket client connected');
+  
+  if (!k8sInitialized) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      error: 'Kubernetes client not initialized. Please check your kubeconfig.'
+    }));
+    ws.close();
+    return;
+  }
   
   const interval = setInterval(async () => {
     try {
@@ -316,8 +372,17 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Kubernetes Dashboard API server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Please choose a different port.`);
+  } else {
+    console.error('Server error:', error);
+  }
+  process.exit(1);
 });
 
