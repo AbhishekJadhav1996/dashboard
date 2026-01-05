@@ -6,6 +6,12 @@
 echo "Installing root dependencies..."
 npm install
 
+# Ensure concurrently is installed globally or locally
+if ! command -v concurrently &> /dev/null; then
+  echo "Installing concurrently..."
+  npm install concurrently --save-dev
+fi
+
 echo "Installing server dependencies..."
 cd server
 npm install
