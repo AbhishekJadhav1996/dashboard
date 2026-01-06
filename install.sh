@@ -85,7 +85,8 @@ else
   echo "✓ react-scripts is installed"
 fi
 
-# Verify @uiw/react-json-view
+# Verify @uiw/react-json-view (fix for react-json-view module resolution error)
+echo "Verifying @uiw/react-json-view installation..."
 if [ ! -d "node_modules/@uiw" ] || [ ! -d "node_modules/@uiw/react-json-view" ]; then
   echo "Installing @uiw/react-json-view..."
   npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save
@@ -96,6 +97,25 @@ if [ ! -d "node_modules/@uiw" ] || [ ! -d "node_modules/@uiw/react-json-view" ];
   fi
 else
   echo "✓ @uiw/react-json-view is installed"
+fi
+
+# Ensure the package is properly linked (fix for module resolution)
+if [ -d "node_modules/@uiw/react-json-view" ]; then
+  echo "Verifying @uiw/react-json-view package integrity..."
+  # Check if package.json exists in the module
+  if [ ! -f "node_modules/@uiw/react-json-view/package.json" ]; then
+    echo "WARNING: Package structure incomplete, reinstalling..."
+    npm uninstall @uiw/react-json-view
+    npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save
+  fi
+  echo "✓ @uiw/react-json-view package verified"
+fi
+
+# Remove any conflicting react-json-view package (old/deprecated package)
+if [ -d "node_modules/react-json-view" ]; then
+  echo "WARNING: Found old 'react-json-view' package, removing to avoid conflicts..."
+  npm uninstall react-json-view 2>/dev/null || rm -rf node_modules/react-json-view
+  echo "✓ Removed conflicting react-json-view package"
 fi
 
 # Verify AJV version (must be 6.x, not 8.x)
@@ -109,9 +129,14 @@ else
   npm install ajv@6.12.6 ajv-keywords@3.5.2 --legacy-peer-deps --save-dev
 fi
 
-# Clear webpack cache to avoid build issues
-echo "Clearing webpack cache..."
+# Clear all caches to avoid build issues (fixes module resolution errors)
+echo "Clearing build caches..."
 rm -rf node_modules/.cache 2>/dev/null || true
+rm -rf .cache 2>/dev/null || true
+rm -rf build 2>/dev/null || true
+# Clear webpack cache specifically
+find node_modules -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true
+echo "✓ Build caches cleared"
 
 cd ..
 echo "✓ Client dependencies installed"
@@ -143,9 +168,23 @@ else
 fi
 
 if [ -d "client/node_modules/@uiw/react-json-view" ]; then
-  echo "✓ Client: @uiw/react-json-view installed"
+  # Verify the package has the necessary files
+  if [ -f "client/node_modules/@uiw/react-json-view/package.json" ] && [ -f "client/node_modules/@uiw/react-json-view/dist/index.js" ] || [ -f "client/node_modules/@uiw/react-json-view/dist/index.esm.js" ]; then
+    echo "✓ Client: @uiw/react-json-view installed and verified"
+  else
+    echo "⚠ Client: @uiw/react-json-view installed but files incomplete"
+    echo "  Reinstalling @uiw/react-json-view..."
+    cd client
+    npm uninstall @uiw/react-json-view
+    npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save
+    cd ..
+  fi
 else
   echo "✗ Client: @uiw/react-json-view missing"
+  echo "  Installing @uiw/react-json-view..."
+  cd client
+  npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save
+  cd ..
 fi
 
 if [ -d "client/node_modules/ajv" ]; then
@@ -181,4 +220,9 @@ echo ""
 echo "🔧 Troubleshooting:"
 echo "   - If client fails, run: cd client && rm -rf node_modules/.cache && npm start"
 echo "   - For clean reinstall: ./install.sh --clean"
+echo "   - If you see 'Can't resolve react-json-view' error:"
+echo "     1. cd client"
+echo "     2. rm -rf node_modules/@uiw node_modules/.cache"
+echo "     3. npm install @uiw/react-json-view@^1.6.9 --legacy-peer-deps --save"
+echo "     4. npm start"
 echo ""
