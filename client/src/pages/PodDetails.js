@@ -15,8 +15,29 @@ import {
   Button,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import ReactJson from 'react-json-view';
 import { getPodDetails, getPodLogs } from '../services/api';
+
+// Simple JSON viewer component (replaces @uiw/react-json-view to avoid dependency issues)
+const JsonView = ({ value }) => (
+  <Box
+    component="pre"
+    sx={{
+      backgroundColor: '#1e1e1e',
+      color: '#d4d4d4',
+      p: 2,
+      borderRadius: 1,
+      fontFamily: 'monospace',
+      fontSize: '0.875rem',
+      maxHeight: '600px',
+      overflow: 'auto',
+      margin: 0,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }}
+  >
+    {JSON.stringify(value, null, 2)}
+  </Box>
+);
 
 export default function PodDetails() {
   const { namespace, name } = useParams();
@@ -177,15 +198,10 @@ export default function PodDetails() {
 
       {tab === 2 && (
         <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>Pod YAML</Typography>
-          <ReactJson
-            src={pod}
-            theme="monokai"
-            collapsed={2}
-            displayDataTypes={false}
-            displayObjectSize={false}
-            enableClipboard={true}
-          />
+          <Typography variant="h6" gutterBottom>Pod JSON</Typography>
+          <Box sx={{ mt: 2 }}>
+            <JsonView value={pod} />
+          </Box>
         </Paper>
       )}
     </Box>
